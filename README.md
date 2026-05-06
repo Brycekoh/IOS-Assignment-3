@@ -2,7 +2,7 @@
 
 A SwiftUI cryptocurrency wallet app built for UTS Assignment 3 (30%). Users sign up, complete a simulated KYC flow, then track holdings and browse markets with live data from CoinGecko.
 
-The visual design is adapted from the **Foxcrypto** community template by [Nickelfox](https://www.nickelfox.com) (Figma Community), used with credit. All Swift code in this project is original.
+The visual design is adapted from the **Foxcrypto** community template by [Nickelfox]([https://www.nickelfox.com](https://www.figma.com/design/ZFMQppx0aP6BC6n7CAyMbq/Foxcrypto---Crypto-App--Community-?node-id=0-1&p=f&t=RkRaE6r4m8L9FXj1-0)) (Figma Community), used with credit. All Swift code in this project is original.
 
 ---
 
