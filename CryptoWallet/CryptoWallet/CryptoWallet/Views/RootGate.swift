@@ -54,6 +54,11 @@ struct RootGate: View {
         .animation(.easeInOut(duration: 0.3), value: hasSeenOnboarding)
         .animation(.easeInOut(duration: 0.3), value: appState.account?.kycStatus)
         .animation(.easeInOut(duration: 0.3), value: appState.account == nil)
+        .onChange(of: appState.account?.id) { _, newValue in
+            if newValue == nil {
+                welcomeStep = .welcome
+            }
+        }
         .preferredColorScheme(colourScheme)
     }
     
@@ -66,7 +71,10 @@ struct RootGate: View {
                 onLogIn:  { welcomeStep = .auth(.login) }
             )
         case .auth(let step):
-            AuthFlowView(initialStep: step)
+            AuthFlowView(
+                initialStep: step,
+                onBack: { welcomeStep = .welcome }
+            )
         }
     }
     

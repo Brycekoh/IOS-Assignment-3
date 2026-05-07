@@ -16,18 +16,18 @@ struct EmailVerificationView: View {
     
     @Environment(AppState.self) private var appState
     
-    @State private var digits: [String] = Array(repeating: "", count: 4)
+    @State private var code = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var resendSeconds = 16
     @State private var resendTimer: Timer?
     
-    /// Single focus state across all four boxes — driven by the
-    /// box index so we can move focus forward as digits are typed.
-    @FocusState private var focusedField: Int?
+    /// One hidden input source powers the four visible boxes. This is
+    /// more stable than coordinating focus across four separate fields.
+    @FocusState private var isCodeFieldFocused: Bool
     
-    private var enteredCode: String { digits.joined() }
-    private var canSubmit: Bool { enteredCode.count == 4 && enteredCode.allSatisfy(\.isNumber) }
+    private var enteredCode: String { code }
+    private var canSubmit: Bool { code.count == 4 }
     
     var body: some View {
         ZStack {
@@ -68,8 +68,23 @@ struct EmailVerificationView: View {
         .toolbarBackground(Theme.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear { focusedField = 0; startResendCountdown() }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    appState.logOut()
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .accessibilityHint("Return to the login and signup flow")
+            }
+        }
+        .onAppear { isCodeFieldFocused = true; startResendCountdown() }
         .onDisappear { resendTimer?.invalidate() }
+        .onChange(of: code) { _, newValue in
+            sanitiseCode(newValue)
+        }
     }
     
     // MARK: - Pieces
@@ -87,35 +102,51 @@ struct EmailVerificationView: View {
     }
     
     private var digitBoxes: some View {
-        HStack(spacing: 12) {
-            ForEach(0..<4, id: \.self) { index in
-                digitBox(at: index)
+        ZStack {
+            hiddenCodeField
+            
+            HStack(spacing: 12) {
+                ForEach(0..<4, id: \.self) { index in
+                    digitBox(at: index)
+                }
             }
         }
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .center)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isCodeFieldFocused = true
+        }
+    }
+    
+    private var hiddenCodeField: some View {
+        TextField("", text: $code)
+        .keyboardType(.numberPad)
+        .textContentType(.oneTimeCode)
+        .focused($isCodeFieldFocused)
+        .tint(Theme.accentYellow)
+        .opacity(0.01)
+        .frame(width: 1, height: 1)
+        .accessibilityHidden(true)
     }
     
     private func digitBox(at index: Int) -> some View {
-        TextField("", text: Binding(
-            get: { digits[index] },
-            set: { newValue in handleDigitInput(newValue, at: index) }
-        ))
-        .keyboardType(.numberPad)
-        .multilineTextAlignment(.center)
-        .font(AppFont.display(28))
-        .foregroundStyle(Theme.textPrimary)
-        .tint(Theme.accentYellow)
-        .frame(width: 56, height: 64)
-        .background(Theme.backgroundPrimary)
+        let digit = digit(at: index)
+        let isActive = isCodeFieldFocused && code.count == index
+        let isFilled = digit != nil
+        
+        return Text(digit.map(String.init) ?? "")
+            .font(AppFont.display(28))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(width: 56, height: 64)
+            .background(Theme.backgroundPrimary)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(
-                    focusedField == index ? Theme.accentYellow : Theme.textSecondary.opacity(0.4),
+                    isActive || isFilled ? Theme.accentYellow : Theme.textSecondary.opacity(0.4),
                     lineWidth: 1.5
                 )
         )
-        .focused($focusedField, equals: index)
     }
     
     private var resendRow: some View {
@@ -134,24 +165,21 @@ struct EmailVerificationView: View {
     
     // MARK: - Logic
     
-    /// When a digit is typed: keep only the last numeric character
-    /// (handles paste of multiple digits), advance focus, treat empty
-    /// input as a backspace and move focus back.
-    private func handleDigitInput(_ value: String, at index: Int) {
-        let filtered = value.filter(\.isNumber)
-        
-        if filtered.isEmpty {
-            digits[index] = ""
-            if index > 0 { focusedField = index - 1 }
-            return
+    private func sanitiseCode(_ rawValue: String) {
+        let filtered = rawValue.filter(\.isNumber)
+        let limited = String(filtered.prefix(4))
+        if code != limited {
+            code = limited
         }
-        
-        digits[index] = String(filtered.suffix(1))
-        if index < 3 {
-            focusedField = index + 1
-        } else {
-            focusedField = nil
+        if code.count >= 4 {
+            isCodeFieldFocused = false
         }
+    }
+    
+    private func digit(at index: Int) -> Character? {
+        guard index < code.count else { return nil }
+        let stringIndex = code.index(code.startIndex, offsetBy: index)
+        return code[stringIndex]
     }
     
     private func submit() async {

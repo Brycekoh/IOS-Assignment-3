@@ -6,8 +6,9 @@
 //  (Identify Card / Passport / Driver's License). Each option is a
 //  full-width card; the selected one gets the yellow accent border.
 //
-//  We use a static country list — sufficient for the demo. A real
-//  app would pull this from a localised list or geolocation service.
+//  Countries come from the system's region list so the picker behaves
+//  more like a real app, and the list expands inline instead of using
+//  a Menu popover.
 //
 
 import SwiftUI
@@ -18,11 +19,9 @@ struct KYCDocumentSelectionView: View {
     let onContinue: () -> Void
     
     @Environment(AppState.self) private var appState
+    @State private var isCountryListExpanded = false
     
-    private let countries = [
-        "Australia", "United States", "United Kingdom", "Canada",
-        "Singapore", "Germany", "Japan", "India", "Other"
-    ]
+    private let countries = Self.allCountries
     
     /// Continue is enabled only when both fields are filled — the
     /// server would reject incomplete submissions, but the UI shouldn't
@@ -66,9 +65,9 @@ struct KYCDocumentSelectionView: View {
     private var countryPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
             FieldLabel(text: "Select Country of Resident")
-            Menu {
-                ForEach(countries, id: \.self) { country in
-                    Button(country) { profile.country = country }
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isCountryListExpanded.toggle()
                 }
             } label: {
                 HStack {
@@ -79,13 +78,64 @@ struct KYCDocumentSelectionView: View {
                     Image(systemName: "chevron.down")
                         .foregroundStyle(Theme.textSecondary)
                         .font(.system(size: 12, weight: .semibold))
+                        .rotationEffect(.degrees(isCountryListExpanded ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .buttonStyle(.plain)
+
+            countryList
         }
+    }
+    
+    private var countryList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(countries, id: \.self) { country in
+                    countryRow(country)
+                }
+            }
+        }
+        .frame(height: isCountryListExpanded ? 260 : 0)
+        .opacity(isCountryListExpanded ? 1 : 0)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Theme.textSecondary.opacity(isCountryListExpanded ? 0.18 : 0), lineWidth: 0.5)
+        )
+        .clipped()
+        .allowsHitTesting(isCountryListExpanded)
+        .animation(.easeInOut(duration: 0.24), value: isCountryListExpanded)
+    }
+    
+    private func countryRow(_ country: String) -> some View {
+        let isSelected = profile.country == country
+        return Button {
+            profile.country = country
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isCountryListExpanded = false
+            }
+        } label: {
+            HStack {
+                Text(country)
+                    .font(AppFont.body(14))
+                    .foregroundStyle(isSelected ? Theme.accentYellow : Theme.textPrimary)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.accentYellow)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(isSelected ? Theme.accentYellow.opacity(0.08) : Color.clear)
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Document type picker
@@ -128,6 +178,16 @@ struct KYCDocumentSelectionView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private extension KYCDocumentSelectionView {
+    static var allCountries: [String] {
+        let locale = Locale.autoupdatingCurrent
+        return Locale.Region.isoRegions
+            .compactMap { locale.localizedString(forRegionCode: $0.identifier) }
+            .filter { !$0.isEmpty }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 }
 

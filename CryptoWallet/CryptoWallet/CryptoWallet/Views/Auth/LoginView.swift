@@ -13,9 +13,9 @@
 import SwiftUI
 
 struct LoginView: View {
+    var onBack: () -> Void = {}
     
     @Environment(AppState.self) private var appState
-    @Environment(\.dismiss) private var dismiss
     
     @State private var email = ""
     @State private var password = ""
@@ -45,6 +45,15 @@ struct LoginView: View {
         .toolbarBackground(Theme.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .accessibilityLabel("Back")
+            }
+        }
     }
     
     // MARK: - Form
@@ -109,7 +118,7 @@ struct LoginView: View {
                 .font(AppFont.body(14))
                 .foregroundStyle(Theme.textSecondary)
             NavigationLink("Create an account") {
-                SignupView()
+                SignupView(onBack: onBack)
             }
             .font(AppFont.bodyMedium(14))
             .foregroundStyle(Theme.accentYellow)

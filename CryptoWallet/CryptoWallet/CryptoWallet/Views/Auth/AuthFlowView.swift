@@ -18,12 +18,13 @@ struct AuthFlowView: View {
     }
     
     let initialStep: Step
+    var onBack: () -> Void = {}
     
     var body: some View {
         NavigationStack {
             switch initialStep {
-            case .login:  LoginView()
-            case .signup: SignupView()
+            case .login:  LoginView(onBack: onBack)
+            case .signup: SignupView(onBack: onBack)
             }
         }
         .tint(Theme.accentYellow)
