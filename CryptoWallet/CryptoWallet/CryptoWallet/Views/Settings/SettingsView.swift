@@ -14,7 +14,7 @@ import SwiftUI
 struct SettingsView: View {
     
     @Environment(AppState.self) private var appState
-    @State private var showLogoutAlert = false
+    @State private var showLogoutPrompt = false
     
     var showsCloseButton: Bool = false
     var onClose: (() -> Void)? = nil
@@ -34,31 +34,17 @@ struct SettingsView: View {
                     walletStats
                     sectionTitle("About")
                     aboutCard
-                    Color.clear.frame(height: 120)
+                    sectionTitle("Account")
+                    logoutButton
+                    Color.clear.frame(height: 80)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
             }
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle("Account")
-                    .padding(.horizontal, 20)
-                logoutButton
-                    .padding(.horizontal, 20)
+            
+            if showLogoutPrompt {
+                logoutPromptOverlay
             }
-            .padding(.top, 12)
-            .padding(.bottom, 12)
-            .background(
-                Theme.backgroundPrimary
-                    .shadow(color: .black.opacity(0.25), radius: 10, y: -4)
-            )
-        }
-        .alert("Log out?", isPresented: $showLogoutAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Log out", role: .destructive) { appState.logOut() }
-        } message: {
-            Text("Your local holdings stay on this device. You'll need to log back in to use the app.")
         }
     }
     
@@ -247,7 +233,9 @@ struct SettingsView: View {
     
     private var logoutButton: some View {
         Button(role: .destructive) {
-            showLogoutAlert = true
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showLogoutPrompt = true
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -265,7 +253,7 @@ struct SettingsView: View {
             .foregroundStyle(Theme.downTint)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, 10)
             .background(Theme.downTint.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
@@ -274,6 +262,56 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var logoutPromptOverlay: some View {
+        ZStack {
+            VStack {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Log out?")
+                        .font(AppFont.heading(20))
+                        .foregroundStyle(Theme.textPrimary)
+                    
+                    Text("Your local holdings stay on this device. You'll need to log back in to use the app.")
+                        .font(AppFont.body(14))
+                        .foregroundStyle(Theme.textSecondary)
+                    
+                    HStack(spacing: 10) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showLogoutPrompt = false
+                            }
+                        } label: {
+                            Text("Cancel")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(FoxcryptoOutlineButtonStyle())
+                        
+                        Button {
+                            showLogoutPrompt = false
+                            appState.logOut()
+                        } label: {
+                            Text("Log out")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(FoxcryptoButtonStyle())
+                    }
+                }
+                .padding(20)
+                .frame(maxWidth: 340)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Theme.textSecondary.opacity(0.14), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 18, y: 10)
+            }
+            .padding(.horizontal, 24)
+            .transition(.scale(scale: 0.96).combined(with: .opacity))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }
 
