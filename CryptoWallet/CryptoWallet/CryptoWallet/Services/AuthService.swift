@@ -56,12 +56,18 @@ final class LocalAuthService: AuthServiceProtocol, @unchecked Sendable {
         let password: String   // mock only — never do this in production
     }
     
+    private enum DemoAccount {
+        static let email = "test@example.com"
+        static let password = "Password1"
+    }
+    
     private let defaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        seedDemoAccountIfNeeded()
     }
     
     // MARK: - Read state
@@ -174,6 +180,21 @@ final class LocalAuthService: AuthServiceProtocol, @unchecked Sendable {
     
     private func setActive(_ id: UUID) {
         defaults.set(id.uuidString, forKey: Key.activeID)
+    }
+    
+    /// Ensure the documented demo account exists on fresh installs so
+    /// the README credentials actually work without a manual sign-up.
+    private func seedDemoAccountIfNeeded() {
+        let email = DemoAccount.email.lowercased()
+        var accounts = loadAccounts()
+        guard accounts[email] == nil else { return }
+        
+        let account = Account(email: email)
+        accounts[email] = StoredCredentials(
+            account: account,
+            password: DemoAccount.password
+        )
+        saveAccounts(accounts)
     }
     
     /// Simulates network round-trip latency so the UI shows spinners
