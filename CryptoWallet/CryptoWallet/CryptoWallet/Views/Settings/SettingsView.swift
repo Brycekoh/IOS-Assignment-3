@@ -16,6 +16,9 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @State private var showLogoutAlert = false
     
+    var showsCloseButton: Bool = false
+    var onClose: (() -> Void)? = nil
+    
     var body: some View {
         ZStack {
             Theme.backgroundPrimary.ignoresSafeArea()
@@ -31,12 +34,25 @@ struct SettingsView: View {
                     walletStats
                     sectionTitle("About")
                     aboutCard
-                    logoutButton
-                    Color.clear.frame(height: 80)
+                    Color.clear.frame(height: 120)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                sectionTitle("Account")
+                    .padding(.horizontal, 20)
+                logoutButton
+                    .padding(.horizontal, 20)
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+            .background(
+                Theme.backgroundPrimary
+                    .shadow(color: .black.opacity(0.25), radius: 10, y: -4)
+            )
         }
         .alert("Log out?", isPresented: $showLogoutAlert) {
             Button("Cancel", role: .cancel) {}
@@ -54,6 +70,19 @@ struct SettingsView: View {
                 .font(AppFont.display(28))
                 .foregroundStyle(Theme.textPrimary)
             Spacer()
+            if showsCloseButton {
+                Button {
+                    onClose?()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.top, 8)
     }
@@ -220,20 +249,31 @@ struct SettingsView: View {
         Button(role: .destructive) {
             showLogoutAlert = true
         } label: {
-            HStack {
+            HStack(spacing: 12) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Log out")
-                    .font(AppFont.bodyMedium(14))
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Log out")
+                        .font(AppFont.bodyMedium(15))
+                    Text("Return to the welcome screen")
+                        .font(AppFont.caption(11))
+                        .foregroundStyle(Theme.downTint.opacity(0.78))
+                }
+                Spacer()
             }
             .foregroundStyle(Theme.downTint)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
             .padding(.vertical, 14)
+            .background(Theme.downTint.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Theme.downTint, lineWidth: 1)
             )
         }
-        .padding(.top, 8)
+        .buttonStyle(.plain)
     }
 }
 
