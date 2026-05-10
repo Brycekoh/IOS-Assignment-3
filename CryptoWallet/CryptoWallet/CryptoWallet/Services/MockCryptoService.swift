@@ -68,30 +68,99 @@ final class MockCryptoService: CryptoServiceProtocol, @unchecked Sendable {
     // MARK: - Sample data
     
     static let sampleCoins: [Coin] = [
-        Coin(id: "bitcoin", symbol: "btc", name: "Bitcoin",
-             imageURL: nil, currentPrice: 67_432.10,
-             marketCap: 1_320_000_000_000, marketCapRank: 1,
-             priceChange24h: 1_532.40, priceChangePercent24h: 2.34,
-             sparkline: (0..<48).map { 65_000 + Double($0) * 60 + sin(Double($0)/3) * 800 }),
-        Coin(id: "ethereum", symbol: "eth", name: "Ethereum",
-             imageURL: nil, currentPrice: 3_521.55,
-             marketCap: 423_000_000_000, marketCapRank: 2,
-             priceChange24h: -45.20, priceChangePercent24h: -1.27,
-             sparkline: (0..<48).map { 3_500 - sin(Double($0)/4) * 80 }),
-        Coin(id: "solana", symbol: "sol", name: "Solana",
-             imageURL: nil, currentPrice: 178.32,
-             marketCap: 82_000_000_000, marketCapRank: 5,
-             priceChange24h: 7.10, priceChangePercent24h: 4.15,
-             sparkline: (0..<48).map { 170 + sin(Double($0)/2) * 6 }),
-        Coin(id: "cardano", symbol: "ada", name: "Cardano",
-             imageURL: nil, currentPrice: 0.52,
-             marketCap: 18_500_000_000, marketCapRank: 9,
-             priceChange24h: -0.01, priceChangePercent24h: -1.92,
-             sparkline: (0..<48).map { 0.52 + sin(Double($0)/4) * 0.02 }),
-        Coin(id: "ripple", symbol: "xrp", name: "XRP",
-             imageURL: nil, currentPrice: 0.61,
-             marketCap: 33_000_000_000, marketCapRank: 7,
-             priceChange24h: 0.02, priceChangePercent24h: 3.39,
-             sparkline: (0..<48).map { 0.60 + sin(Double($0)/3) * 0.015 })
+        makeCoin(
+            id: "bitcoin",
+            symbol: "btc",
+            name: "Bitcoin",
+            currentPrice: 67_432.10,
+            marketCap: 1_320_000_000_000,
+            marketCapRank: 1,
+            priceChange24h: 1_532.40,
+            priceChangePercent24h: 2.34,
+            sparkline: sparkline48 { point in
+                65_000 + point * 60 + sin(point / 3) * 800
+            }
+        ),
+        makeCoin(
+            id: "ethereum",
+            symbol: "eth",
+            name: "Ethereum",
+            currentPrice: 3_521.55,
+            marketCap: 423_000_000_000,
+            marketCapRank: 2,
+            priceChange24h: -45.20,
+            priceChangePercent24h: -1.27,
+            sparkline: sparkline48 { point in
+                3_500 - sin(point / 4) * 80
+            }
+        ),
+        makeCoin(
+            id: "solana",
+            symbol: "sol",
+            name: "Solana",
+            currentPrice: 178.32,
+            marketCap: 82_000_000_000,
+            marketCapRank: 5,
+            priceChange24h: 7.10,
+            priceChangePercent24h: 4.15,
+            sparkline: sparkline48 { point in
+                170 + sin(point / 2) * 6
+            }
+        ),
+        makeCoin(
+            id: "cardano",
+            symbol: "ada",
+            name: "Cardano",
+            currentPrice: 0.52,
+            marketCap: 18_500_000_000,
+            marketCapRank: 9,
+            priceChange24h: -0.01,
+            priceChangePercent24h: -1.92,
+            sparkline: sparkline48 { point in
+                0.52 + sin(point / 4) * 0.02
+            }
+        ),
+        makeCoin(
+            id: "ripple",
+            symbol: "xrp",
+            name: "XRP",
+            currentPrice: 0.61,
+            marketCap: 33_000_000_000,
+            marketCapRank: 7,
+            priceChange24h: 0.02,
+            priceChangePercent24h: 3.39,
+            sparkline: sparkline48 { point in
+                0.60 + sin(point / 3) * 0.015
+            }
+        )
     ]
+    
+    private static func makeCoin(
+        id: String,
+        symbol: String,
+        name: String,
+        currentPrice: Double,
+        marketCap: Double,
+        marketCapRank: Int,
+        priceChange24h: Double,
+        priceChangePercent24h: Double,
+        sparkline: [Double]
+    ) -> Coin {
+        Coin(
+            id: id,
+            symbol: symbol,
+            name: name,
+            imageURL: nil,
+            currentPrice: currentPrice,
+            marketCap: marketCap,
+            marketCapRank: marketCapRank,
+            priceChange24h: priceChange24h,
+            priceChangePercent24h: priceChangePercent24h,
+            sparkline: sparkline
+        )
+    }
+    
+    private static func sparkline48(_ transform: (Double) -> Double) -> [Double] {
+        (0..<48).map { transform(Double($0)) }
+    }
 }
