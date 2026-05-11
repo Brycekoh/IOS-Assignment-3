@@ -86,7 +86,7 @@ final class CryptoService: CryptoServiceProtocol, Sendable {
         return dto.toDomain()
     }
     
-    func search(query: String) async throws -> [Coin] {
+    func search(query: String, currency: Currency) async throws -> [Coin] {
         // The /search endpoint returns a slim response without prices, so
         // we then call /coins/markets with the resulting ids to get full
         // Coin objects. Two requests, but the user only sees one spinner.
@@ -105,7 +105,7 @@ final class CryptoService: CryptoServiceProtocol, Sendable {
         let marketsURL = Self.baseURL
             .appending(path: "coins/markets")
             .appending(queryItems: [
-                .init(name: "vs_currency", value: Currency.usd.apiCode),
+                .init(name: "vs_currency", value: currency.apiCode),
                 .init(name: "ids", value: ids.joined(separator: ",")),
                 .init(name: "sparkline", value: "false")
             ])

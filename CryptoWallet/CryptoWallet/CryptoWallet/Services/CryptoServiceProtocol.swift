@@ -32,6 +32,6 @@ protocol CryptoServiceProtocol: Sendable {
     /// Historical prices for the chart.
     func fetchChart(id: String, currency: Currency, range: ChartRange) async throws -> [PricePoint]
     
-    /// Free-text coin search by name or symbol.
-    func search(query: String) async throws -> [Coin]
+    /// Free-text coin search by name or symbol in the active fiat currency.
+    func search(query: String, currency: Currency) async throws -> [Coin]
 }

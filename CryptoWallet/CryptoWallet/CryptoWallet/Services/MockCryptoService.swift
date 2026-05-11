@@ -57,7 +57,7 @@ final class MockCryptoService: CryptoServiceProtocol, @unchecked Sendable {
         }
     }
     
-    func search(query: String) async throws -> [Coin] {
+    func search(query: String, currency: Currency) async throws -> [Coin] {
         if let error = shouldFail { throw error }
         let q = query.lowercased()
         return MockCryptoService.sampleCoins.filter {
