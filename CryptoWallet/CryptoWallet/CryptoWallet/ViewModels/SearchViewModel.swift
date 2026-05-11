@@ -32,7 +32,7 @@ final class SearchViewModel {
     /// Trigger a new search. Debounces by 300ms — if the caller fires
     /// this multiple times in quick succession only the latest one
     /// will hit the network.
-    func search(query: String, service: any CryptoServiceProtocol) {
+    func search(query: String, currency: Currency, service: any CryptoServiceProtocol) {
         searchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -45,7 +45,7 @@ final class SearchViewModel {
         searchTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
-            await self?.perform(query: trimmed, service: service)
+            await self?.perform(query: trimmed, currency: currency, service: service)
         }
     }
     
@@ -55,9 +55,9 @@ final class SearchViewModel {
         phase = .idle
     }
     
-    private func perform(query: String, service: any CryptoServiceProtocol) async {
+    private func perform(query: String, currency: Currency, service: any CryptoServiceProtocol) async {
         do {
-            let results = try await service.search(query: query)
+            let results = try await service.search(query: query, currency: currency)
             guard !Task.isCancelled else { return }
             phase = .loaded(results)
         } catch let error as CryptoError {
