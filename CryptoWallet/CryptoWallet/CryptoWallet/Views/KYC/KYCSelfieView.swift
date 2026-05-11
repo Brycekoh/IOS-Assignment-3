@@ -48,7 +48,6 @@ struct KYCSelfieView: View {
                 Button("Continue") {
                     Task {
                         try? await appState.updateKYCProfile(profile)
-                        try? await appState.completeKYC()
                         onContinue()
                     }
                 }
