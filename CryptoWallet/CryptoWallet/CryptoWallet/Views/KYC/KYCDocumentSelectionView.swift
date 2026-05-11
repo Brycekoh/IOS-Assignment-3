@@ -20,6 +20,8 @@ struct KYCDocumentSelectionView: View {
     
     @Environment(AppState.self) private var appState
     @State private var isCountryListExpanded = false
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     private let countries = Self.allCountries
     
@@ -47,16 +49,36 @@ struct KYCDocumentSelectionView: View {
                 KYCPrivacyNotice()
                 Button("Continue") {
                     Task {
-                        try? await appState.updateKYCProfile(profile)
-                        onContinue()
+                        await submit()
                     }
                 }
                 .buttonStyle(FoxcryptoButtonStyle())
-                .disabled(!canContinue)
+                .disabled(!canContinue || isLoading)
                 .opacity(canContinue ? 1 : 0.6)
+                
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(AppFont.caption(12))
+                        .foregroundStyle(Theme.downTint)
+                        .multilineTextAlignment(.center)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
+        }
+    }
+
+    private func submit() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            try await appState.updateKYCProfile(profile)
+            onContinue()
+        } catch let error as AuthError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = "We couldn't save your document selection. Please try again."
         }
     }
     

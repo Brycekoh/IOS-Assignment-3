@@ -14,6 +14,8 @@ struct KYCVerifiedView: View {
     
     @Environment(AppState.self) private var appState
     @State private var hasFinished = false
+    @State private var isLoading = false
+    @State private var errorMessage: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -53,14 +55,23 @@ struct KYCVerifiedView: View {
                 
                 Button("Back to Home") {
                     Task {
-                        Haptics.success()
-                        try? await appState.completeKYC()
+                        await completeKYC()
                     }
                 }
                 .buttonStyle(FoxcryptoButtonStyle())
+                .disabled(isLoading)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
                 .opacity(hasFinished ? 1 : 0)
+                
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(AppFont.caption(12))
+                        .foregroundStyle(Theme.downTint)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 16)
+                }
             }
         }
         .task {
@@ -71,6 +82,20 @@ struct KYCVerifiedView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 hasFinished = true
             }
+        }
+    }
+
+    private func completeKYC() async {
+        errorMessage = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            Haptics.success()
+            try await appState.completeKYC()
+        } catch let error as AuthError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = "We couldn't finish verification. Please try again."
         }
     }
 }
