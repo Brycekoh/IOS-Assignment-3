@@ -43,16 +43,18 @@ struct MarketView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
         }
-        .task {
-            if marketVM.coins.isEmpty {
-                await marketVM.load(currency: appState.currency, service: cryptoService)
+        .task(id: appState.currency) {
+            // Keep both the market list and search results aligned with the selected fiat currency.
+            await marketVM.load(currency: appState.currency, service: cryptoService)
+            if query.count > 1 {
+                searchVM.search(query: query, currency: appState.currency, service: cryptoService)
             }
         }
         .onChange(of: query) { _, newValue in
             // Search runs only when user types > 1 char to avoid
             // a flood of single-letter requests.
             if newValue.count > 1 {
-                searchVM.search(query: newValue, service: cryptoService)
+                searchVM.search(query: newValue, currency: appState.currency, service: cryptoService)
             } else {
                 searchVM.clear()
             }
@@ -140,7 +142,7 @@ struct MarketView: View {
                 }
             case .failed(let error):
                 ErrorView(error: error) {
-                    searchVM.search(query: query, service: cryptoService)
+                    searchVM.search(query: query, currency: appState.currency, service: cryptoService)
                 }
             }
         } else {
@@ -175,7 +177,7 @@ struct MarketView: View {
                             NavigationLink {
                                 CoinDetailView(coinID: coin.id, name: coin.name, symbol: coin.symbol, imageURL: coin.imageURL)
                             } label: {
-                                MarketRow(coin: coin)
+                                MarketRow(coin: coin, currency: appState.currency)
                             }
                             .buttonStyle(.plain)
                         }
@@ -200,7 +202,7 @@ struct MarketView: View {
                     NavigationLink {
                         CoinDetailView(coinID: coin.id, name: coin.name, symbol: coin.symbol, imageURL: coin.imageURL)
                     } label: {
-                        MarketRow(coin: coin)
+                        MarketRow(coin: coin, currency: appState.currency)
                     }
                     .buttonStyle(.plain)
                 }
@@ -215,6 +217,7 @@ struct MarketView: View {
 /// sparkline filling the middle, price + change on the right.
 private struct MarketRow: View {
     let coin: Coin
+    let currency: Currency
     
     var body: some View {
         HStack(spacing: 12) {
@@ -240,7 +243,7 @@ private struct MarketRow: View {
             }
             
             VStack(alignment: .trailing, spacing: 2) {
-                Text(PriceFormatter.currency(coin.currentPrice, currency: .usd))
+                Text(PriceFormatter.currency(coin.currentPrice, currency: currency))
                     .font(AppFont.mono(14, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
                 Text(PriceFormatter.percent(coin.priceChangePercent24h ?? 0))

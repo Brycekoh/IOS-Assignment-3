@@ -30,7 +30,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     topBar
-                    BalanceCard(totalUSD: portfolioTotal, todayProfitUSD: todayProfit)
+                    BalanceCard(totalValue: portfolioTotal, todayProfit: todayProfit, currency: appState.currency)
                     topCoinsSection
                     newsSection
                     Color.clear.frame(height: 80)  // tab bar clearance
@@ -39,10 +39,9 @@ struct HomeView: View {
                 .padding(.top, 8)
             }
         }
-        .task {
-            if marketVM.coins.isEmpty {
-                await marketVM.load(currency: appState.currency, service: cryptoService)
-            }
+        .task(id: appState.currency) {
+            // Home shares market data with the Market tab, so a fiat change should refresh both surfaces.
+            await marketVM.load(currency: appState.currency, service: cryptoService)
         }
     }
     
@@ -101,7 +100,7 @@ struct HomeView: View {
                         NavigationLink {
                             CoinDetailView(coinID: coin.id, name: coin.name, symbol: coin.symbol, imageURL: coin.imageURL)
                         } label: {
-                            TopCoinCard(coin: coin)
+                            TopCoinCard(coin: coin, currency: appState.currency)
                         }
                         .buttonStyle(.plain)
                     }
@@ -133,8 +132,9 @@ struct HomeView: View {
 /// rather than a single shape — gives the layered "money is in this
 /// wallet" depth that makes the design memorable.
 private struct BalanceCard: View {
-    let totalUSD: Double
-    let todayProfitUSD: Double
+    let totalValue: Double
+    let todayProfit: Double
+    let currency: Currency
     
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -173,15 +173,15 @@ private struct BalanceCard: View {
                         .font(AppFont.bodyMedium(13))
                         .foregroundStyle(Theme.backgroundPrimary.opacity(0.7))
                     
-                    Text(PriceFormatter.currency(totalUSD, currency: .usd))
+                    Text(PriceFormatter.currency(totalValue, currency: currency))
                         .font(AppFont.display(28))
                         .foregroundStyle(Theme.backgroundPrimary)
                     
                     HStack(spacing: 6) {
-                        Image(systemName: todayProfitUSD >= 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
-                            .foregroundStyle(todayProfitUSD >= 0 ? Theme.upTint : Theme.downTint)
+                        Image(systemName: todayProfit >= 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
+                            .foregroundStyle(todayProfit >= 0 ? Theme.upTint : Theme.downTint)
                             .font(.system(size: 12, weight: .bold))
-                        Text("\(PriceFormatter.currency(todayProfitUSD, currency: .usd)) Today's Profit")
+                        Text("\(PriceFormatter.currency(todayProfit, currency: currency)) Today's Profit")
                             .font(AppFont.body(12))
                             .foregroundStyle(Theme.backgroundPrimary.opacity(0.7))
                     }
@@ -220,6 +220,7 @@ private struct FloatingCoinsCluster: View {
 
 private struct TopCoinCard: View {
     let coin: Coin
+    let currency: Currency
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -231,7 +232,7 @@ private struct TopCoinCard: View {
                     .lineLimit(1)
             }
             
-            Text("$ " + PriceFormatter.currency(coin.currentPrice, currency: .usd, showSymbol: false))
+            Text(currency.symbol + " " + PriceFormatter.currency(coin.currentPrice, currency: currency, showSymbol: false))
                 .font(AppFont.mono(15, weight: .semibold))
                 .foregroundStyle(Theme.textPrimary)
             

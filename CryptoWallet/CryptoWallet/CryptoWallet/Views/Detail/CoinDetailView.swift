@@ -28,6 +28,10 @@ struct CoinDetailView: View {
     @State private var vm = CoinDetailViewModel()
     @State private var showAddSheet = false
     
+    private var reloadKey: String {
+        "\(coinID)-\(appState.currency.rawValue)"
+    }
+    
     var body: some View {
         ZStack {
             Theme.backgroundPrimary.ignoresSafeArea()
@@ -67,7 +71,8 @@ struct CoinDetailView: View {
                 }
             }
         }
-        .task(id: coinID) {
+        .task(id: reloadKey) {
+            // Detail data and chart should both follow the active fiat currency.
             await vm.load(coinID: coinID, currency: appState.currency, service: cryptoService)
         }
         .sheet(isPresented: $showAddSheet) {
@@ -113,7 +118,14 @@ struct CoinDetailView: View {
         HStack(spacing: 4) {
             ForEach(ChartRange.allCases) { range in
                 Button {
-                    Task { await vm.changeRange(to: range, coinID: coinID, service: cryptoService) }
+                    Task {
+                        await vm.changeRange(
+                            to: range,
+                            coinID: coinID,
+                            currency: appState.currency,
+                            service: cryptoService
+                        )
+                    }
                 } label: {
                     Text(range.label)
                         .font(AppFont.bodyMedium(13))

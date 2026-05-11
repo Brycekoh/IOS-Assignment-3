@@ -53,14 +53,15 @@ final class CoinDetailViewModel {
     /// User picked a different time range. Doesn't reset `detail`,
     /// only re-fetches the chart points. Cancels any prior in-flight
     /// fetch so we don't paint stale data.
-    func changeRange(to new: ChartRange, coinID: String, service: any CryptoServiceProtocol) async {
+    func changeRange(to new: ChartRange, coinID: String, currency: Currency, service: any CryptoServiceProtocol) async {
         range = new
         chartTask?.cancel()
         chartLoading = true
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let fresh = try await service.fetchChart(id: coinID, currency: .usd, range: new)
+                self.error = nil
+                let fresh = try await service.fetchChart(id: coinID, currency: currency, range: new)
                 guard !Task.isCancelled else { return }
                 self.chart = fresh
             } catch let error as CryptoError {
