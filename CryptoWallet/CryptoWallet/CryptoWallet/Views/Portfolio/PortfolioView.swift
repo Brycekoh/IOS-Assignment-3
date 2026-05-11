@@ -13,8 +13,10 @@ import SwiftUI
 struct PortfolioView: View {
     
     @Environment(AppState.self) private var appState
+    @Environment(\.cryptoService) private var cryptoService
     @Bindable var marketVM: MarketViewModel
     @State private var showAddSheet = false
+    @State private var usdReferenceCoins: [Coin] = []
     
     var body: some View {
         ZStack {
@@ -31,6 +33,9 @@ struct PortfolioView: View {
         .sheet(isPresented: $showAddSheet) {
             NavigationStack { AddHoldingView() }
                 .preferredColorScheme(.dark)
+        }
+        .task(id: appState.currency) {
+            await loadUSDReferenceCoins()
         }
     }
     
@@ -49,8 +54,8 @@ struct PortfolioView: View {
         }
     }
     
-    private var totalValue: Double { valuedHoldings.reduce(0) { $0 + $1.currentValueUSD } }
-    private var totalCost: Double { valuedHoldings.reduce(0) { $0 + $1.totalCostUSD } }
+    private var totalValue: Double { valuedHoldings.reduce(0) { $0 + displayValue(for: $1) } }
+    private var totalCost: Double { valuedHoldings.reduce(0) { $0 + displayCost(for: $1) } }
     private var totalPL: Double { totalValue - totalCost }
     
     // MARK: - Header
@@ -76,11 +81,11 @@ struct PortfolioView: View {
     
     private var summaryStrip: some View {
         HStack(spacing: 8) {
-            SummaryTile(label: "Value", value: PriceFormatter.currency(totalValue, currency: .usd))
-            SummaryTile(label: "Cost", value: PriceFormatter.currency(totalCost, currency: .usd))
+            SummaryTile(label: "Value", value: PriceFormatter.currency(totalValue, currency: appState.currency))
+            SummaryTile(label: "Cost", value: PriceFormatter.currency(totalCost, currency: appState.currency))
             SummaryTile(
                 label: "P/L",
-                value: PriceFormatter.currency(totalPL, currency: .usd),
+                value: PriceFormatter.currency(totalPL, currency: appState.currency),
                 tint: Theme.plColour(totalPL)
             )
         }
@@ -100,7 +105,14 @@ struct PortfolioView: View {
             ScrollView {
                 LazyVStack(spacing: 8) {
                     ForEach(valuedHoldings, id: \.holding.id) { vh in
-                        HoldingRow(valued: vh, coin: marketVM.coins.first(where: { $0.id == vh.holding.coinID }))
+                        HoldingRow(
+                            valued: vh,
+                            coin: marketVM.coins.first(where: { $0.id == vh.holding.coinID }),
+                            currency: appState.currency,
+                            currentValue: displayValue(for: vh),
+                            profitLoss: displayProfitLoss(for: vh),
+                            profitLossPercent: displayProfitLossPercent(for: vh)
+                        )
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
                                     appState.removeHolding(id: vh.holding.id)
@@ -112,6 +124,47 @@ struct PortfolioView: View {
                     Color.clear.frame(height: 80)  // tab bar clearance
                 }
             }
+        }
+    }
+    
+    // Holdings keep a USD cost basis internally; convert it into the active
+    // display currency using the current USD-vs-selected quote for the same coin.
+    private func displayCost(for valued: ValuedHolding) -> Double {
+        valued.totalCostUSD * conversionRate(for: valued.holding.coinID)
+    }
+    
+    private func displayValue(for valued: ValuedHolding) -> Double {
+        valued.currentValueUSD
+    }
+    
+    private func displayProfitLoss(for valued: ValuedHolding) -> Double {
+        displayValue(for: valued) - displayCost(for: valued)
+    }
+    
+    private func displayProfitLossPercent(for valued: ValuedHolding) -> Double {
+        let displayCost = displayCost(for: valued)
+        guard displayCost > 0 else { return 0 }
+        return (displayProfitLoss(for: valued) / displayCost) * 100
+    }
+    
+    private func conversionRate(for coinID: String) -> Double {
+        guard appState.currency != .usd else { return 1 }
+        guard let displayCoin = marketVM.coins.first(where: { $0.id == coinID }),
+              let usdCoin = usdReferenceCoins.first(where: { $0.id == coinID }),
+              usdCoin.currentPrice > 0 else { return 1 }
+        return displayCoin.currentPrice / usdCoin.currentPrice
+    }
+    
+    private func loadUSDReferenceCoins() async {
+        guard appState.currency != .usd else {
+            usdReferenceCoins = []
+            return
+        }
+        
+        do {
+            usdReferenceCoins = try await cryptoService.fetchMarkets(currency: .usd, perPage: 50, page: 1)
+        } catch {
+            usdReferenceCoins = []
         }
     }
 }
@@ -146,6 +199,10 @@ private struct SummaryTile: View {
 private struct HoldingRow: View {
     let valued: ValuedHolding
     let coin: Coin?
+    let currency: Currency
+    let currentValue: Double
+    let profitLoss: Double
+    let profitLossPercent: Double
     
     var body: some View {
         HStack(spacing: 12) {
@@ -163,12 +220,12 @@ private struct HoldingRow: View {
             Spacer()
             
             VStack(alignment: .trailing, spacing: 2) {
-                Text(PriceFormatter.currency(valued.currentValueUSD, currency: .usd))
+                Text(PriceFormatter.currency(currentValue, currency: currency))
                     .font(AppFont.mono(14, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Text(PriceFormatter.percent(valued.profitLossPercent))
+                Text(PriceFormatter.percent(profitLossPercent))
                     .font(AppFont.captionBold(11))
-                    .foregroundStyle(Theme.plColour(valued.profitLossUSD))
+                    .foregroundStyle(Theme.plColour(profitLoss))
             }
         }
         .padding(.horizontal, 12)
