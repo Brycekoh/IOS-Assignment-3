@@ -2,10 +2,11 @@
 //  RootTabView.swift
 //  CryptoWallet
 //
-//  Custom tab bar implementation matching the Figma's bottom dock:
-//  4 tabs (Home / Market / Porfolio / Setting — sic from the design)
-//  with a yellow circular + button overlapping the bar between
-//  Market and Porfolio.
+//  Custom main-shell implementation matching the Figma's bottom dock:
+//  4 actions across the bottom dock (Home / Market / Porfolio /
+//  Setting — sic from the design) with a yellow circular + button
+//  overlapping the bar between Market and Porfolio. Settings still
+//  opens as a separate screen rather than switching tab content.
 //
 //  Why custom instead of SwiftUI's TabView:
 //    1. SwiftUI's tab bar can't have a centre button that's not a tab.
@@ -20,9 +21,6 @@ import SwiftUI
 
 @MainActor
 struct RootTabView: View {
-    
-    @Environment(AppState.self) private var appState
-    @Environment(\.cryptoService) private var cryptoService
     
     @State private var selectedTab: Tab = .home
     @State private var showAddSheet = false
@@ -53,34 +51,20 @@ struct RootTabView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Theme.backgroundPrimary.ignoresSafeArea()
-            
-            // Use TabView so each tab keeps its own NavigationStack and
-            // pushed state survives a tab switch. We hide TabView's
-            // built-in bar and overlay our own so we can match the
-            // Figma exactly.
-            TabView(selection: $selectedTab) {
-                NavigationStack {
-                    HomeView(marketVM: marketVM)
-                }.tag(Tab.home)
-                
-                NavigationStack {
-                    MarketView(marketVM: marketVM)
-                }.tag(Tab.market)
-                
-                NavigationStack {
-                    PortfolioView(marketVM: marketVM)
-                }.tag(Tab.portfolio)
-            }
-            .tint(Theme.accentYellow)
-            .toolbar(.hidden, for: .tabBar)
+        VStack(spacing: 0) {
+            activeTabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             tabBar
         }
+        .background(
+            Theme.backgroundPrimary.ignoresSafeArea()
+        )
         .sheet(isPresented: $showAddSheet) {
             NavigationStack { AddHoldingView() }
                 .preferredColorScheme(.dark)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $showSettings) {
             NavigationStack {
@@ -94,6 +78,26 @@ struct RootTabView: View {
     }
     
     // MARK: - Tab bar
+    
+    @ViewBuilder
+    private var activeTabContent: some View {
+        // Render the selected screen directly so the custom dock controls
+        // the visible content instead of relying on a hidden system tab bar.
+        switch selectedTab {
+        case .home:
+            NavigationStack {
+                HomeView(marketVM: marketVM)
+            }
+        case .market:
+            NavigationStack {
+                MarketView(marketVM: marketVM)
+            }
+        case .portfolio:
+            NavigationStack {
+                PortfolioView(marketVM: marketVM)
+            }
+        }
+    }
     
     private var tabBar: some View {
         ZStack(alignment: .top) {
@@ -112,10 +116,11 @@ struct RootTabView: View {
                     .shadow(color: .black.opacity(0.4), radius: 8, y: -2)
             )
             
-            // The centre + button overlapping the bar.
+            // The centre + button overlapping the bar without covering the whole content layer.
             plusButton
                 .offset(y: -22)
         }
+        .frame(height: 88)
     }
     
     private var settingsButton: some View {
@@ -132,6 +137,7 @@ struct RootTabView: View {
             .foregroundStyle(Theme.textSecondary)
             .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.plain)
     }
     
     private func tabButton(_ tab: Tab) -> some View {
