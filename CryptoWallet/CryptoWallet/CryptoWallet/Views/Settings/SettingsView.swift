@@ -14,7 +14,10 @@ import SwiftUI
 struct SettingsView: View {
     
     @Environment(AppState.self) private var appState
-    @State private var showLogoutAlert = false
+    @State private var showLogoutPrompt = false
+    
+    var showsCloseButton: Bool = false
+    var onClose: (() -> Void)? = nil
     
     var body: some View {
         ZStack {
@@ -31,18 +34,17 @@ struct SettingsView: View {
                     walletStats
                     sectionTitle("About")
                     aboutCard
+                    sectionTitle("Account")
                     logoutButton
                     Color.clear.frame(height: 80)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
             }
-        }
-        .alert("Log out?", isPresented: $showLogoutAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Log out", role: .destructive) { appState.logOut() }
-        } message: {
-            Text("Your local holdings stay on this device. You'll need to log back in to use the app.")
+            
+            if showLogoutPrompt {
+                logoutPromptOverlay
+            }
         }
     }
     
@@ -54,6 +56,19 @@ struct SettingsView: View {
                 .font(AppFont.display(28))
                 .foregroundStyle(Theme.textPrimary)
             Spacer()
+            if showsCloseButton {
+                Button {
+                    onClose?()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.top, 8)
     }
@@ -218,22 +233,85 @@ struct SettingsView: View {
     
     private var logoutButton: some View {
         Button(role: .destructive) {
-            showLogoutAlert = true
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showLogoutPrompt = true
+            }
         } label: {
-            HStack {
+            HStack(spacing: 12) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Log out")
-                    .font(AppFont.bodyMedium(14))
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Log out")
+                        .font(AppFont.bodyMedium(15))
+                    Text("Return to the welcome screen")
+                        .font(AppFont.caption(11))
+                        .foregroundStyle(Theme.downTint.opacity(0.78))
+                }
+                Spacer()
             }
             .foregroundStyle(Theme.downTint)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Theme.downTint.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Theme.downTint, lineWidth: 1)
             )
         }
-        .padding(.top, 8)
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var logoutPromptOverlay: some View {
+        ZStack {
+            VStack {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Log out?")
+                        .font(AppFont.heading(20))
+                        .foregroundStyle(Theme.textPrimary)
+                    
+                    Text("Your local holdings stay on this device. You'll need to log back in to use the app.")
+                        .font(AppFont.body(14))
+                        .foregroundStyle(Theme.textSecondary)
+                    
+                    HStack(spacing: 10) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showLogoutPrompt = false
+                            }
+                        } label: {
+                            Text("Cancel")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(FoxcryptoOutlineButtonStyle())
+                        
+                        Button {
+                            showLogoutPrompt = false
+                            appState.logOut()
+                        } label: {
+                            Text("Log out")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(FoxcryptoButtonStyle())
+                    }
+                }
+                .padding(20)
+                .frame(maxWidth: 340)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Theme.textSecondary.opacity(0.14), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 18, y: 10)
+            }
+            .padding(.horizontal, 24)
+            .transition(.scale(scale: 0.96).combined(with: .opacity))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }
 

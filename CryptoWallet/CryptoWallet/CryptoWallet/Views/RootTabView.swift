@@ -26,10 +26,11 @@ struct RootTabView: View {
     
     @State private var selectedTab: Tab = .home
     @State private var showAddSheet = false
+    @State private var showSettings = false
     @State private var marketVM = MarketViewModel()
     
     enum Tab: String, CaseIterable, Identifiable {
-        case home, market, portfolio, settings
+        case home, market, portfolio
         var id: String { rawValue }
         
         // Tab labels mirror the Figma's exact spelling — "Porfolio"
@@ -39,7 +40,6 @@ struct RootTabView: View {
             case .home:      return "Home"
             case .market:    return "Market"
             case .portfolio: return "Porfolio"
-            case .settings:  return "Setting"
             }
         }
         
@@ -48,7 +48,6 @@ struct RootTabView: View {
             case .home:      return "house.fill"
             case .market:    return "chart.bar.fill"
             case .portfolio: return "chart.pie.fill"
-            case .settings:  return "gearshape.fill"
             }
         }
     }
@@ -73,10 +72,6 @@ struct RootTabView: View {
                 NavigationStack {
                     PortfolioView(marketVM: marketVM)
                 }.tag(Tab.portfolio)
-                
-                NavigationStack {
-                    SettingsView()
-                }.tag(Tab.settings)
             }
             .tint(Theme.accentYellow)
             .toolbar(.hidden, for: .tabBar)
@@ -86,6 +81,15 @@ struct RootTabView: View {
         .sheet(isPresented: $showAddSheet) {
             NavigationStack { AddHoldingView() }
                 .preferredColorScheme(.dark)
+        }
+        .fullScreenCover(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView(
+                    showsCloseButton: true,
+                    onClose: { showSettings = false }
+                )
+            }
+            .preferredColorScheme(.dark)
         }
     }
     
@@ -98,7 +102,7 @@ struct RootTabView: View {
                 tabButton(.market)
                 Color.clear.frame(maxWidth: .infinity)  // gap for + button
                 tabButton(.portfolio)
-                tabButton(.settings)
+                settingsButton
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
@@ -111,6 +115,22 @@ struct RootTabView: View {
             // The centre + button overlapping the bar.
             plusButton
                 .offset(y: -22)
+        }
+    }
+    
+    private var settingsButton: some View {
+        Button {
+            Haptics.selection()
+            showSettings = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .medium))
+                Text("Setting")
+                    .font(AppFont.caption(10))
+            }
+            .foregroundStyle(Theme.textSecondary)
+            .frame(maxWidth: .infinity)
         }
     }
     
