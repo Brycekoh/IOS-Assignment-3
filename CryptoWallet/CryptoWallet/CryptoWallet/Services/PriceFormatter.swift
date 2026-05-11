@@ -27,6 +27,8 @@ enum PriceFormatter {
         formatter.locale = Locale(identifier: currency.localeIdentifier)
         if showSymbol {
             formatter.currencyCode = currency.apiCode.uppercased()
+            // Force the visible symbol so AUD shows as "A$" instead of the locale's plain "$".
+            formatter.currencySymbol = currency.symbol
         }
         
         let abs = Swift.abs(value)
