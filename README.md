@@ -2,7 +2,7 @@
 
 A SwiftUI cryptocurrency wallet app built for UTS Assignment 3 (30%). Users sign up, complete a simulated KYC flow, then track holdings and browse markets with live data from CoinGecko.
 
-The visual design is adapted from the **Foxcrypto** community template by [Nickelfox]([https://www.nickelfox.com](https://www.figma.com/design/ZFMQppx0aP6BC6n7CAyMbq/Foxcrypto---Crypto-App--Community-?node-id=0-1&p=f&t=RkRaE6r4m8L9FXj1-0)) (Figma Community), used with credit. All Swift code in this project is original.
+The visual design is adapted from the **Foxcrypto** community template by [Nickelfox](https://www.figma.com/design/ZFMQppx0aP6BC6n7CAyMbq/Foxcrypto---Crypto-App--Community-?node-id=0-1&p=f&t=RkRaE6r4m8L9FXj1-0) (Figma Community), used with credit. All Swift code in this project is original.
 
 ---
 
@@ -42,7 +42,7 @@ The signup flow is the smoother demo path because it shows the full user journey
 | Browse market data | ✅ | `MarketView` with search + favourites filter |
 | Coin detail with chart | ✅ | `CoinDetailView` with Apple Charts (1D/7D/30D/1Y) |
 | Track holdings | ✅ | `PortfolioView` + `AddHoldingView` |
-| Portfolio totals | ✅ | Total value, total cost, P/L (USD-based) |
+| Portfolio totals | ✅ | Total value, total cost, P/L shown in the selected display currency |
 | Persistence | ✅ | `PortfolioStore`, `LocalAuthService` (UserDefaults + JSON) |
 | Settings | ✅ | `SettingsView` — currency, theme, account info, logout |
 | Multiple tabs | ✅ | `RootTabView` — custom 4-tab bar with centre + button |
@@ -65,7 +65,7 @@ Key wiring decisions:
 
 - **`AppState` is the single observable.** Owns currency, theme, holdings, favourites, and the active account. Children read it via `@Environment(AppState.self)`.
 - **`MarketViewModel` is shared between Home and Market.** One instance lives in `RootTabView` and is passed down — no duplicate fetches, no out-of-sync price displays.
-- **Services are protocol-first.** Every ViewModel takes `any CryptoServiceProtocol` / `any AuthServiceProtocol` so tests inject mocks. The real `LocalAuthService` and `CryptoService` only differ from their mocks in *what they do*, not *how they're called*.
+- **Services are protocol-first.** Every ViewModel takes `any CryptoServiceProtocol` / `any AuthServiceProtocol` so mocks can be injected without changing the call sites. The real `LocalAuthService` and `CryptoService` only differ from their mocks in *what they do*, not *how they're called*.
 - **Errors are typed enums.** `CryptoError` and `AuthError` both conform to `LocalizedError` + `Equatable`, so call sites get exhaustive switches and `Phase.failed(.offline) == .failed(.offline)` works.
 - **Routing is centralised.** `RootGate` is the single switch that decides which top-level view to show based on auth + KYC state.
 
@@ -81,7 +81,7 @@ Key wiring decisions:
 | Type system used to prevent incorrect code | `CryptoError`, `AuthError`, `Currency`, `KYCStatus`, `ChartRange`, `Tab` are all enums. `ValuedHolding` cannot exist without a price. The compiler enforces our invariants. |
 | Error handling | Every async service call returns a typed error. `MarketView`, `CoinDetailView`, `LoginView`, `SignupView` all render error UI inline. Validation runs both client- and "server"-side (auth service). |
 | Extensibility | Adding a new fiat currency is a single line in `Currency`. Adding a new chart range is a single case in `ChartRange`. Adding a new auth provider is a new conformer to `AuthServiceProtocol`. |
-| Idempotency | `ValuedHolding` derivations are pure functions — tested with 100 reads (`test_derivedValues_areIdempotent`). |
+| Idempotency | `ValuedHolding` derivations are pure functions — repeated reads of derived values do not mutate state. |
 | Iterative cycles | Three documented loops: (1) MVP wallet → (2) live data + protocol abstraction → (3) Foxcrypto redesign + auth/KYC flow. |
 | Greatest difficulty | Sharing `MarketViewModel` between Home and Market without a duplicate refresh — solved by lifting it to `RootTabView` and passing it down. Documented in code comments. |
 
@@ -107,7 +107,6 @@ Key wiring decisions:
 - Custom tab bar with centre yellow + button.
 - Home screen rebuilt with gradient blue Total Balance hero card.
 - All views restyled to the dark + yellow aesthetic.
-- Tests expanded to cover auth + new VM API.
 
 ---
 
@@ -143,7 +142,7 @@ Code comment in `RootTabView.swift` documents the design choice for the marker.
 - **Real photo upload in KYC.** Currently the upload slots are tap-to-toggle. A full implementation would use `PhotosPicker` (or `UIImagePickerController` bridged) to capture and persist an image. Out of scope for this assignment's rubric.
 - **Real backend.** All auth and KYC is local. The protocol abstraction means a future swap to Firebase/Supabase is one new conformer, not a rewrite — but it's flagged here so a marker can ask about it in the demo.
 - **News API.** The Home screen's News section uses three hardcoded headlines. Real integration would need a news provider (CoinGecko, NewsAPI, CryptoCompare).
-- **FX conversion of portfolio.** Holdings are stored in USD cost basis. Switching the active currency to AUD/EUR/etc. converts the *list* prices but the totals still sum in USD. A real implementation would convert per-holding to the active currency at render time.
+- **USD cost basis in Add Holding.** Holdings are still entered with a USD purchase price, because cost basis is stored internally in USD. The portfolio screen converts that stored cost basis into the selected display currency at render time, but a production app would support entering the original purchase price in the user's chosen fiat currency too.
 - **Password security.** Passwords are stored in plaintext in UserDefaults — this is *educational mock only* and is documented as such in `AuthService.swift`. A real app uses Keychain + key derivation.
 
 ---
@@ -159,5 +158,4 @@ Code comment in `RootTabView.swift` documents the design choice for the marker.
 
 ## Repository
 
-GitHub: `https://github.com/<YOUR_GROUP>/CryptoWallet`
-*(replace before submission)*
+GitHub: `https://github.com/Brycekoh/IOS-Assignment-3`
