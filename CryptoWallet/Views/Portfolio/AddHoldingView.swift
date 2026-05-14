@@ -119,6 +119,7 @@ struct AddHoldingView: View {
             }
             .buttonStyle(.plain)
 
+            // Mirror the inline KYC picker pattern so selection stays in context.
             coinList
         }
     }
@@ -201,7 +202,7 @@ struct AddHoldingView: View {
                 keyboardType: .decimalPad
             )
             HStack {
-                Text("What you paid per unit when you bought.")
+                Text("Stored in USD for portfolio profit/loss calculations.")
                     .font(AppFont.caption(11))
                     .foregroundStyle(Theme.textSecondary)
                 Spacer()
@@ -254,6 +255,7 @@ struct AddHoldingView: View {
     
     private func loadCoins() async {
         do {
+            // The picker uses USD quotes because holdings keep a USD cost basis internally.
             availableCoins = try await cryptoService.fetchMarkets(currency: .usd, perPage: 50, page: 1)
         } catch {
             // Fall back to mock data for the picker so the form still
