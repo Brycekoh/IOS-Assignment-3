@@ -12,7 +12,7 @@ Alex bought their first crypto last month. They want a clean, branded place to t
 
 The app prioritises:
 - A balance-front-and-centre home screen — Alex sees their net position before anything else
-- Holdings that update live from market prices, no manual refresh
+- Holdings that update from current market prices without manual entry
 - A friction-light "add a holding" flow that fits how Alex actually thinks about the data ("I bought 0.5 BTC at $40k")
 
 ---
@@ -45,7 +45,7 @@ The signup flow is the smoother demo path because it shows the full user journey
 | Portfolio totals | ✅ | Total value, total cost, P/L shown in the selected display currency |
 | Persistence | ✅ | `PortfolioStore`, `LocalAuthService` (UserDefaults + JSON) |
 | Settings | ✅ | `SettingsView` — currency, appearance setting, account info, logout |
-| Multiple tabs | ✅ | `RootTabView` — custom 4-tab bar with centre + button |
+| Multiple tabs | ✅ | `RootTabView` — custom bottom dock with 4 actions and a centre + button |
 
 ---
 
