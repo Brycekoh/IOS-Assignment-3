@@ -3,7 +3,7 @@
 //  CryptoWallet
 //
 //  Sheet for adding a new position to the portfolio. Three inputs:
-//  coin (Menu picker, prefilled when launched from Detail), quantity
+//  coin (inline picker, prefilled when launched from Detail), quantity
 //  (decimal pad), purchase price (decimal pad). Live preview row at
 //  the top shows what the user is currently building.
 //
@@ -29,6 +29,7 @@ struct AddHoldingView: View {
     @State private var quantityString = ""
     @State private var priceString = ""
     @State private var availableCoins: [Coin] = []
+    @State private var isCoinListExpanded = false
     
     @Environment(\.cryptoService) private var cryptoService
     
@@ -90,13 +91,9 @@ struct AddHoldingView: View {
     private var coinSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             FieldLabel(text: "Coin")
-            Menu {
-                ForEach(availableCoins) { coin in
-                    Button("\(coin.name) (\(coin.symbol.uppercased()))") {
-                        selectedCoinID = coin.id
-                        selectedName = coin.name
-                        selectedSymbol = coin.symbol
-                    }
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isCoinListExpanded.toggle()
                 }
             } label: {
                 HStack {
@@ -113,13 +110,72 @@ struct AddHoldingView: View {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.textSecondary)
+                        .rotationEffect(.degrees(isCoinListExpanded ? 180 : 0))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .buttonStyle(.plain)
+
+            coinList
         }
+    }
+    
+    private var coinList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(availableCoins) { coin in
+                    coinRow(coin)
+                }
+            }
+        }
+        .frame(height: isCoinListExpanded ? 240 : 0)
+        .opacity(isCoinListExpanded ? 1 : 0)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Theme.textSecondary.opacity(isCoinListExpanded ? 0.18 : 0), lineWidth: 0.5)
+        )
+        .clipped()
+        .allowsHitTesting(isCoinListExpanded)
+        .animation(.easeInOut(duration: 0.24), value: isCoinListExpanded)
+    }
+    
+    private func coinRow(_ coin: Coin) -> some View {
+        let isSelected = selectedCoinID == coin.id
+        return Button {
+            selectedCoinID = coin.id
+            selectedName = coin.name
+            selectedSymbol = coin.symbol
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isCoinListExpanded = false
+            }
+        } label: {
+            HStack(spacing: 12) {
+                CoinIcon(url: coin.imageURL, symbol: coin.symbol, size: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(coin.name)
+                        .font(AppFont.body(14))
+                        .foregroundStyle(isSelected ? Theme.accentYellow : Theme.textPrimary)
+                    Text(coin.symbol.uppercased())
+                        .font(AppFont.caption(11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.accentYellow)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(isSelected ? Theme.accentYellow.opacity(0.08) : Color.clear)
+        }
+        .buttonStyle(.plain)
     }
     
     private var quantitySection: some View {
