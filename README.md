@@ -44,7 +44,7 @@ The signup flow is the smoother demo path because it shows the full user journey
 | Track holdings | ✅ | `PortfolioView` + `AddHoldingView` |
 | Portfolio totals | ✅ | Total value, total cost, P/L shown in the selected display currency |
 | Persistence | ✅ | `PortfolioStore`, `LocalAuthService` (UserDefaults + JSON) |
-| Settings | ✅ | `SettingsView` — currency, theme, account info, logout |
+| Settings | ✅ | `SettingsView` — currency, appearance setting, account info, logout |
 | Multiple tabs | ✅ | `RootTabView` — custom 4-tab bar with centre + button |
 
 ---
@@ -143,6 +143,7 @@ Code comment in `RootTabView.swift` documents the design choice for the marker.
 - **Real backend.** All auth and KYC is local. The protocol abstraction means a future swap to Firebase/Supabase is one new conformer, not a rewrite — but it's flagged here so a marker can ask about it in the demo.
 - **News API.** The Home screen's News section uses three hardcoded headlines. Real integration would need a news provider (CoinGecko, NewsAPI, CryptoCompare).
 - **USD cost basis in Add Holding.** Holdings are still entered with a USD purchase price, because cost basis is stored internally in USD. The portfolio screen converts that stored cost basis into the selected display currency at render time, but a production app would support entering the original purchase price in the user's chosen fiat currency too.
+- **Appearance modes.** The app supports system / light / dark selection at the SwiftUI environment level, but the visual design system is intentionally dark-first. A production version would add a fully tuned light palette rather than reusing the same brand tokens everywhere.
 - **Password security.** Passwords are stored in plaintext in UserDefaults — this is *educational mock only* and is documented as such in `AuthService.swift`. A real app uses Keychain + key derivation.
 
 ---
