@@ -32,28 +32,38 @@ struct CoinDetailView: View {
         "\(coinID)-\(appState.currency.rawValue)"
     }
     
+    private var initialLoadFailed: Bool {
+        vm.detail == nil && vm.error != nil
+    }
+    
     var body: some View {
         ZStack {
             Theme.backgroundPrimary.ignoresSafeArea()
             
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    hero
-                    rangePicker
-                    chart
-                    statsGrid
-                    Button {
-                        showAddSheet = true
-                    } label: {
-                        Label("Add to Wallet", systemImage: "plus")
-                    }
-                    .buttonStyle(FoxcryptoButtonStyle())
-                    
-                    aboutSection
-                    Color.clear.frame(height: 40)
+            if initialLoadFailed, let error = vm.error {
+                ErrorView(error: error) {
+                    retryInitialLoad()
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        hero
+                        rangePicker
+                        chart
+                        statsGrid
+                        Button {
+                            showAddSheet = true
+                        } label: {
+                            Label("Add to Wallet", systemImage: "plus")
+                        }
+                        .buttonStyle(FoxcryptoButtonStyle())
+                        
+                        aboutSection
+                        Color.clear.frame(height: 40)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                }
             }
         }
         .navigationTitle(name)
@@ -80,6 +90,23 @@ struct CoinDetailView: View {
                 AddHoldingView(preselectedCoinID: coinID, preselectedSymbol: symbol)
             }
             .preferredColorScheme(.dark)
+        }
+    }
+    
+    private func retryInitialLoad() {
+        Task {
+            await vm.load(coinID: coinID, currency: appState.currency, service: cryptoService)
+        }
+    }
+    
+    private func retryChart() {
+        Task {
+            await vm.changeRange(
+                to: vm.range,
+                coinID: coinID,
+                currency: appState.currency,
+                service: cryptoService
+            )
         }
     }
     
@@ -152,50 +179,101 @@ struct CoinDetailView: View {
                 .frame(height: 200)
                 .frame(maxWidth: .infinity)
         } else if vm.chart.isEmpty {
-            Text("No chart data available")
-                .font(AppFont.body(13))
-                .foregroundStyle(Theme.textSecondary)
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
+            if let error = vm.error {
+                chartErrorState(error)
+            } else {
+                emptyChartState
+            }
         } else {
-            Chart(vm.chart) { point in
-                LineMark(
-                    x: .value("Time", point.date),
-                    y: .value("Price", point.price)
-                )
-                .foregroundStyle(Theme.upTint)
-                .interpolationMethod(.monotone)
-                
-                AreaMark(
-                    x: .value("Time", point.date),
-                    y: .value("Price", point.price)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Theme.upTint.opacity(0.3), Theme.upTint.opacity(0.0)],
-                        startPoint: .top,
-                        endPoint: .bottom
+            VStack(alignment: .leading, spacing: 12) {
+                Chart(vm.chart) { point in
+                    LineMark(
+                        x: .value("Time", point.date),
+                        y: .value("Price", point.price)
                     )
-                )
-                .interpolationMethod(.monotone)
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine().foregroundStyle(Theme.textSecondary.opacity(0.15))
-                    AxisValueLabel().foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.upTint)
+                    .interpolationMethod(.monotone)
+                    
+                    AreaMark(
+                        x: .value("Time", point.date),
+                        y: .value("Price", point.price)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Theme.upTint.opacity(0.3), Theme.upTint.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.monotone)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(Theme.textSecondary.opacity(0.15))
+                        AxisValueLabel().foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(Theme.textSecondary.opacity(0.15))
+                        AxisValueLabel().foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .frame(height: 200)
+                
+                if let error = vm.error {
+                    // Keep stale chart data visible while surfacing a failed refresh.
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(error.errorDescription ?? "Unable to refresh chart data.")
+                            .font(AppFont.body(12))
+                            .foregroundStyle(Theme.textSecondary)
+                        Spacer()
+                        Button("Retry", action: retryChart)
+                            .font(AppFont.bodyMedium(12))
+                            .foregroundStyle(Theme.accentYellow)
+                    }
                 }
             }
-            .chartYAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine().foregroundStyle(Theme.textSecondary.opacity(0.15))
-                    AxisValueLabel().foregroundStyle(Theme.textSecondary)
-                }
-            }
-            .frame(height: 200)
             .padding(12)
             .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
         }
+    }
+    
+    private func chartErrorState(_ error: CryptoError) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 24))
+                .foregroundStyle(Theme.textSecondary)
+            Text(error.errorDescription ?? "Unable to load chart data.")
+                .font(AppFont.body(13))
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Retry", action: retryChart)
+                .buttonStyle(FoxcryptoButtonStyle(fillsWidth: false))
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
+    }
+    
+    private var emptyChartState: some View {
+        VStack(spacing: 10) {
+            Text("No chart data available")
+                .font(AppFont.body(13))
+                .foregroundStyle(Theme.textSecondary)
+            Button("Retry", action: retryChart)
+                .buttonStyle(FoxcryptoButtonStyle(fillsWidth: false))
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
     }
     
     // MARK: - Stats grid
