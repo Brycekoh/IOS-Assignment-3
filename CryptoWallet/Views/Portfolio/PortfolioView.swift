@@ -32,7 +32,7 @@ struct PortfolioView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             NavigationStack { AddHoldingView() }
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(appState.resolvedColorScheme)
         }
         .task(id: appState.currency) {
             await loadUSDReferenceCoins()

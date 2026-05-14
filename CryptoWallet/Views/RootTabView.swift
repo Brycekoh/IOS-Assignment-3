@@ -22,6 +22,7 @@ import SwiftUI
 @MainActor
 struct RootTabView: View {
     
+    @Environment(AppState.self) private var appState
     @State private var selectedTab: Tab = .home
     @State private var showAddSheet = false
     @State private var showSettings = false
@@ -62,7 +63,7 @@ struct RootTabView: View {
         )
         .sheet(isPresented: $showAddSheet) {
             NavigationStack { AddHoldingView() }
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(appState.resolvedColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -73,7 +74,7 @@ struct RootTabView: View {
                     onClose: { showSettings = false }
                 )
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(appState.resolvedColorScheme)
         }
     }
     

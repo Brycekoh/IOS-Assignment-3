@@ -70,7 +70,6 @@ struct CoinDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Theme.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -89,7 +88,7 @@ struct CoinDetailView: View {
             NavigationStack {
                 AddHoldingView(preselectedCoinID: coinID, preselectedSymbol: symbol)
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(appState.resolvedColorScheme)
         }
     }
     

@@ -14,6 +14,7 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
 @Observable
 @MainActor
@@ -42,11 +43,25 @@ final class AppState {
     ) {
         self.store = store
         self.authService = authService
-        self.holdings = store.loadHoldings()
-        self.favourites = store.loadFavourites()
         self.currency = Self.loadCurrency()
         self.colourScheme = Self.loadColourScheme()
         self.account = authService.currentAccount()
+        // Point the store at whoever's currently signed in BEFORE loading
+        // holdings/favourites, so we read this account's namespaced data
+        // and never another account's. On a fresh launch with no session,
+        // account is nil and the store uses its "guest" namespace.
+        store.setActiveAccount(account?.id.uuidString)
+        self.holdings = store.loadHoldings()
+        self.favourites = store.loadFavourites()
+    }
+    
+    /// Re-point the store at the active account and reload its wallet.
+    /// Called after every auth transition (sign up, log in, log out) so
+    /// the in-memory holdings/favourites always match the signed-in user.
+    private func reloadWalletForCurrentAccount() {
+        store.setActiveAccount(account?.id.uuidString)
+        holdings = store.loadHoldings()
+        favourites = store.loadFavourites()
     }
     
     // MARK: - Auth surface
@@ -58,11 +73,18 @@ final class AppState {
     func signUp(email: String, password: String, acceptedTerms: Bool) async throws {
         let new = try await authService.signUp(email: email, password: password, acceptedTerms: acceptedTerms)
         account = new
+        // A brand-new account starts with an empty wallet — scoping the
+        // store to its id ensures we don't inherit the previous user's
+        // holdings that are still sitting in UserDefaults.
+        reloadWalletForCurrentAccount()
     }
     
     func logIn(email: String, password: String) async throws {
         let signed = try await authService.logIn(email: email, password: password)
         account = signed
+        // Load THIS account's saved holdings/favourites, not whatever
+        // was last in memory from a previous session.
+        reloadWalletForCurrentAccount()
     }
     
     func verifyEmail(code: String) async throws {
@@ -83,6 +105,11 @@ final class AppState {
     func logOut() {
         authService.logOut()
         account = nil
+        // Clear the in-memory wallet and re-point the store at the
+        // "guest" namespace. Without this, the signed-out state would
+        // still hold the last user's holdings in memory — and the next
+        // sign-up would briefly see them before its own reload.
+        reloadWalletForCurrentAccount()
     }
     
     // MARK: - Holdings (wallet operations)
@@ -127,6 +154,18 @@ final class AppState {
     func setColourScheme(_ new: AppColourScheme) {
         colourScheme = new
         UserDefaults.standard.set(new.rawValue, forKey: "settings.colourScheme")
+    }
+    
+    /// The colour scheme as SwiftUI's `ColorScheme?` — nil means "follow
+    /// the system". Used by the root view and by any sheet/cover that
+    /// presents outside the root's environment and therefore has to
+    /// re-apply the user's choice explicitly.
+    var resolvedColorScheme: ColorScheme? {
+        switch colourScheme {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
     }
     
     private static func loadCurrency() -> Currency {

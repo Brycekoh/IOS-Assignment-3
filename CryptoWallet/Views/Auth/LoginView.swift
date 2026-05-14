@@ -44,7 +44,6 @@ struct LoginView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Theme.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button(action: onBack) {
