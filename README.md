@@ -2,7 +2,7 @@
 
 A SwiftUI cryptocurrency wallet app built for UTS Assignment 3 (30%). Users sign up, complete a simulated KYC flow, then track holdings and browse markets with live data from CoinGecko.
 
-The visual design is adapted from the **Foxcrypto** community template by [Nickelfox](https://www.figma.com/design/ZFMQppx0aP6BC6n7CAyMbq/Foxcrypto---Crypto-App--Community-?node-id=0-1&p=f&t=RkRaE6r4m8L9FXj1-0) (Figma Community), used with credit. All Swift code in this project is original.
+
 
 ---
 
@@ -150,7 +150,6 @@ Code comment in `RootTabView.swift` documents the design choice for the marker.
 
 ## Credits
 
-- **Visual design:** Foxcrypto template by Nickelfox (Figma Community), used with credit. All Swift code is original.
 - **Market data:** [CoinGecko](https://www.coingecko.com/en/api) public API.
 - **Font:** Apple SF Pro Rounded (system font; chosen as a free, native alternative to the Figma's Poppins).
 - **Sample news images:** [Unsplash](https://unsplash.com).
